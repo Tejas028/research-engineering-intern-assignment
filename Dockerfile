@@ -39,8 +39,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy app files and pre-built artifacts
 COPY . .
 
-# Expose port
+# Expose the default local port; Railway injects PORT at runtime.
 EXPOSE 8000
 
-# Start uvicorn
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+# Start uvicorn on Railway's assigned port when available.
+CMD ["sh", "-c", "uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1"]

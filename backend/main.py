@@ -36,6 +36,7 @@ DB_PATH           = os.environ.get("DB_PATH",    os.path.join(PROJECT_ROOT, "nar
 EMB_PATH          = os.environ.get("EMB_PATH",   os.path.join(PROJECT_ROOT, "embeddings_cache.npz"))
 TOPIC_CACHE_PATH  = os.environ.get("TOPIC_CACHE_PATH", os.path.join(PROJECT_ROOT, "topic_cache.json"))
 STATIC_DIR        = os.path.join(PROJECT_ROOT, "static")
+PORT              = int(os.environ.get("PORT", "8000"))
 
 # Global variables setup
 embed_model = None
@@ -48,6 +49,18 @@ db_rows = 0
 def get_con():
     """Open a fresh read-only DuckDB connection for each request (thread-safe)."""
     return duckdb.connect(DB_PATH, read_only=True)
+
+
+def ensure_embed_model():
+    """Load the embedding model on demand so startup stays fast in cloud deploys."""
+    global embed_model, model_loaded
+    if embed_model is not None:
+        return embed_model
+
+    logger.info("Loading SentenceTransformer model on demand...")
+    embed_model = SentenceTransformer("all-MiniLM-L6-v2")
+    model_loaded = True
+    return embed_model
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -63,15 +76,7 @@ async def lifespan(app: FastAPI):
         logger.error(f"Error opening DB: {e}")
         db_rows = 0
 
-    # 2. Load model
-    try:
-        logger.info("Loading SentenceTransformer model...")
-        embed_model = SentenceTransformer("all-MiniLM-L6-v2")
-        model_loaded = True
-    except Exception as e:
-        logger.error(f"Error loading model: {e}")
-
-    # 3. Load embeddings
+    # 2. Load embeddings
     cache_path = EMB_PATH
     if not os.path.exists(cache_path):
         cache_path = "embeddings_cache.npz" # fallback to CWD
@@ -615,7 +620,16 @@ def search(
             
         limit = max(1, min(100, limit))
         
-        q_emb = embed_model.encode(q)
+        try:
+            model = ensure_embed_model()
+        except Exception as e:
+            logger.error(f"Error loading model for search: {e}")
+            return JSONResponse(
+                status_code=503,
+                content={"error": "Search model is unavailable right now.", "results": []}
+            )
+
+        q_emb = model.encode(q)
         norms = norm(embeddings, axis=1) * norm(q_emb)
         norms[norms == 0] = 1.0 
         sims = (embeddings @ q_emb) / norms
@@ -1208,4 +1222,4 @@ def get_coordination():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=PORT)
