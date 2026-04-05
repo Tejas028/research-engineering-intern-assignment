@@ -24,13 +24,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy all project files
 COPY . .
 
-# Pre-download the sentence transformer model into the image
-RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
-
-# Pre-generate database and embeddings from raw data (needed since artifacts are Git-ignored)
-RUN python ingest.py
-RUN python ml/embed.py
-RUN python ml/topic_model.py
 
 # Expose port (Railway maps this automatically)
 EXPOSE 8000

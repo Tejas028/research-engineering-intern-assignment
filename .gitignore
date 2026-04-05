@@ -5,10 +5,9 @@ __pycache__/
 venv/
 .venv/
 
-# Large ML artifacts — DO NOT commit these to git
-# Railway will regenerate them from the Dockerfile + data
-embeddings_cache.npz
-narrativenet.db
+# ML artifacts now committed to repo for fast Railway builds
+# embeddings_cache.npz
+# narrativenet.db
 
 # Frontend
 frontend/node_modules/
