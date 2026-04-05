@@ -29,6 +29,7 @@ RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTr
 
 # Pre-generate database and embeddings from raw data (needed since artifacts are Git-ignored)
 RUN python ingest.py
+RUN python ml/embed.py
 RUN python ml/topic_model.py
 
 # Expose port (Railway maps this automatically)
