@@ -1,34 +1,46 @@
-FROM python:3.11-slim
-
-# System dependencies for UMAP/HDBSCAN (C++ compilation) and httpx
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    gcc \
-    g++ \
-    libgomp1 \
-    curl \
-    python3-dev \
- && rm -rf /var/lib/apt/lists/*
+# --- Stage 1: Build Stage ---
+FROM python:3.11-slim as builder
 
 WORKDIR /app
 
-# Pre-install build-time requirements for HDBSCAN/UMAP C extensions
-# These must be installed BEFORE the rest of requirements.txt
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel
-RUN pip install --no-cache-dir "numpy<2.0.0" Cython
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    python3-dev \
+    gcc \
+    g++ \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first for layer caching
+# Install CPU-only Torch first (saves ~2GB)
+RUN pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu
+
+# Install build-time requirements for HDBSCAN/UMAP
+RUN pip install --no-cache-dir Cython "numpy<2.0.0" setuptools wheel
+
+# Install everything else
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy all project files
+# --- Stage 2: Runtime Stage ---
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Copy only the installed packages from builder
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+
+# Install runtime system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy app files and pre-built artifacts
 COPY . .
 
-
-# Expose port (Railway maps this automatically)
+# Expose port
 EXPOSE 8000
 
-# Start uvicorn. Workers=1 because we load large in-memory state
-# (embeddings matrix, sentence transformer) — multiple workers would
-# each allocate ~500MB, exhausting Railway's free tier RAM.
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--timeout-keep-alive", "75"]
+# Start uvicorn
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
