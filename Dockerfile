@@ -7,9 +7,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     g++ \
     libgomp1 \
     curl \
+    python3-dev \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
+
+# Pre-install build-time requirements for HDBSCAN/UMAP C extensions
+# These must be installed BEFORE the rest of requirements.txt
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+RUN pip install --no-cache-dir "numpy<2.0.0" Cython
 
 # Copy requirements first for layer caching
 COPY requirements.txt .
