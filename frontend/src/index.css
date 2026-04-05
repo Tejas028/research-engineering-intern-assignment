@@ -1,0 +1,89 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-base:        #080B11;
+  --bg-surface:     #0F1420;
+  --bg-elevated:    #161D2E;
+  --border-subtle:  #1E2A3A;
+  --border-active:  #2A3F5F;
+  --accent-primary: #4F6EF7;
+  --accent-left:    #60A5FA;
+  --accent-right:   #F87171;
+  --accent-center:  #34D399;
+  --accent-warn:    #FBBF24;
+  --accent-danger:  #EF4444;
+  --text-primary:   #F1F5F9;
+  --text-secondary: #94A3B8;
+  --text-muted:     #475569;
+  --text-mono:      #64748B;
+}
+
+body {
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+* { box-sizing: border-box; }
+
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--bg-surface); }
+::-webkit-scrollbar-thumb { background: var(--border-active); border-radius: 2px; }
+
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(1.4); }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes counter {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--bg-surface) 0px,
+    var(--bg-elevated) 80px,
+    var(--bg-surface) 160px
+  );
+  background-size: 400px 100%;
+  animation: shimmer 1.5s infinite linear;
+}
+
+.pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
+.slide-up  { animation: slide-up 200ms ease-out forwards; }
+
+input[type="range"] {
+  accent-color: var(--accent-primary);
+  height: 4px;
+}
+
+select {
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-family: 'Inter', sans-serif;
+  outline: none;
+  cursor: pointer;
+}
+
+select:focus { border-color: var(--accent-primary); }
