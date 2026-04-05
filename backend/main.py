@@ -144,6 +144,11 @@ def empty_response():
     return JSONResponse(content={"data": [], "message": "No results found"})
 
 
+@app.get("/")
+def root():
+    return JSONResponse(content={"status": "ok"})
+
+
 @app.get("/health")
 def health():
     return JSONResponse(content={
