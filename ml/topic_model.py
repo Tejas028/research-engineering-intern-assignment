@@ -7,7 +7,7 @@ import time
 
 from bertopic import BERTopic
 from umap import UMAP
-from hdbscan import HDBSCAN
+from sklearn.cluster import HDBSCAN
 from sklearn.feature_extraction.text import CountVectorizer
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -59,7 +59,7 @@ if __name__ == "__main__":
         try:
             topic_model = BERTopic(
                 umap_model=umap_model,
-                hdbscan_model=HDBSCAN(min_cluster_size=15, metric="euclidean", prediction_data=True),
+                hdbscan_model=HDBSCAN(min_cluster_size=15, metric="euclidean"),
                 vectorizer_model=vectorizer,
                 nr_topics=nr_topics,
                 calculate_probabilities=False,
