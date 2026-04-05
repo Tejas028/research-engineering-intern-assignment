@@ -1,0 +1,27 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+pip-log.txt
+pip-delete-this-directory.txt
+.venv
+.env
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Large Data (Needed for ingestion during build)
+# data.jsonl
+
+# Git
+.git
+.gitignore
+
+# OS
+.DS_Store
+Thumbs.db
