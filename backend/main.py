@@ -77,29 +77,30 @@ async def lifespan(app: FastAPI):
         db_rows = 0
 
     # 2. Load embeddings
-    cache_path = EMB_PATH
-    if not os.path.exists(cache_path):
-        cache_path = "embeddings_cache.npz" # fallback to CWD
-        
-    if os.path.exists(cache_path):
-        try:
+    try:
+        cache_path = EMB_PATH
+        if not os.path.exists(cache_path):
+            cache_path = "embeddings_cache.npz" # fallback to CWD
+            
+        if os.path.exists(cache_path):
             logger.info(f"Loading embeddings cache from {cache_path}...")
             data = np.load(cache_path, allow_pickle=True)
-            loaded_embeddings = data['embeddings']
-            loaded_post_ids = data['ids']
-            
-            if loaded_embeddings.shape[0] == db_rows:
-                embeddings = loaded_embeddings
-                post_ids = loaded_post_ids
-                embeddings_loaded = True
-            else:
-                logger.warning(f"Embeddings shape ({loaded_embeddings.shape[0]}) doesn't match DB row count ({db_rows}). Embeddings will NOT be used.")
-                embeddings_loaded = False
-        except Exception as e:
-            logger.error(f"Error loading embeddings cache: {e}")
+            embeddings = data['embeddings'].astype(np.float32)
+            post_ids = data['ids'].tolist()
+            embeddings_loaded = True
+            logger.info(f"Loaded {len(post_ids)} embeddings.")
+        else:
+            logger.warning("Embeddings cache not found. Semantic search will be limited.")
             embeddings_loaded = False
+    except Exception as e:
+        logger.error(f"Error loading embeddings: {e}")
+        embeddings_loaded = False
+
+    # 3. Model check (Pre-caching happens in Docker, but we can verify here)
+    if model_loaded:
+        logger.info("Model is already loaded.")
     else:
-        logger.info(f"Embeddings cache not found.")
+        logger.info("Model will be loaded on-demand during first search.")
             
     yield
 
@@ -112,10 +113,7 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 import os
 
 _RAW_ORIGINS = os.environ.get("ALLOWED_ORIGINS", "*")
-if _RAW_ORIGINS == "*":
-    _ORIGINS = ["*"]
-else:
-    _ORIGINS = [o.strip() for o in _RAW_ORIGINS.split(",") if o.strip()]
+_ORIGINS = ["*"] if _RAW_ORIGINS == "*" else [o.strip() for o in _RAW_ORIGINS.split(",") if o.strip()]
 
 app.add_middleware(
     CORSMiddleware,
@@ -151,9 +149,16 @@ def root():
 
 @app.get("/health")
 def health():
+    try:
+        with get_con() as c:
+            rows = c.execute("SELECT COUNT(*) FROM posts").fetchone()[0]
+    except Exception:
+        rows = 0
+        
     return JSONResponse(content={
         "status": "ok",
-        "db_rows": db_rows,
+        "timestamp": datetime.now().isoformat(),
+        "db_rows": rows,
         "embeddings_loaded": embeddings_loaded,
         "model_loaded": model_loaded
     })
