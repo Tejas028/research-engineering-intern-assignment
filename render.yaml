@@ -1,0 +1,29 @@
+services:
+  # Backend API (Docker)
+  - type: web
+    name: narrativenet-backend
+    runtime: docker
+    dockerfile: Dockerfile
+    dockerContext: .
+    plan: free # Change to 'starter' if you experience OOM kills
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 8000
+
+  # Frontend Dashboard (Static Site)
+  - type: web
+    name: narrativenet-frontend
+    runtime: static
+    buildCommand: "cd frontend && npm install && npm run build"
+    publishPath: ./frontend/dist
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: narrativenet-backend
+          property: url
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
