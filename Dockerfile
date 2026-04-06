@@ -2,10 +2,6 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# System dependencies
-# libgomp1: required by HDBSCAN compiled C extension
-# build-essential + gcc + g++: required to compile UMAP/HDBSCAN wheels
-# curl: required for Railway healthcheck probe
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     gcc \
@@ -15,62 +11,58 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
  && rm -rf /var/lib/apt/lists/*
 
-# Install CPU-only torch first and separately
-# This pins the index URL so pip doesn't pull CUDA torch (~2GB) later
+# Step 1: pin numpy FIRST before anything else installs it
+# numpy 1.26.4 is the last 1.x release — fully compatible with
+# scipy, sklearn, sentence-transformers, and torch 2.2
+RUN pip install --no-cache-dir "numpy==1.26.4"
+
+# Step 2: install torch CPU — must come before transformers/sentence-transformers
+# so torch doesn't drag in a different numpy
 RUN pip install --no-cache-dir \
-    torch==2.2.0 \
-    torchvision==0.17.0 \
+    "torch==2.2.0" \
+    "torchvision==0.17.0" \
     --index-url https://download.pytorch.org/whl/cpu
 
-# Install build helpers before the main requirements
-# numpy<2.0.0 is required by HDBSCAN and older BERTopic versions
+# Step 3: install scipy and sklearn explicitly at compatible versions
+# BEFORE requirements.txt so pip doesn't pick incompatible versions
 RUN pip install --no-cache-dir \
-    "numpy<2.0.0" \
-    Cython \
-    setuptools \
-    wheel
+    "scipy==1.11.4" \
+    "scikit-learn==1.5.1"
 
-# Copy and install all other requirements
+# Step 4: install everything else
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy all project files including:
-# - narrativenet.db
-# - embeddings_cache.npz
-# - topic_cache.json
-# - static/topic_map.html
-# - backend/main.py
-# - ml/
+# Step 5: verify numpy ABI is intact — if this fails the build fails loudly
+RUN python -c "\
+import numpy as np; \
+import scipy.sparse; \
+import sklearn; \
+from sentence_transformers import SentenceTransformer; \
+print(f'numpy {np.__version__} OK'); \
+print(f'scipy OK'); \
+print(f'sklearn OK'); \
+print(f'sentence_transformers OK')"
+
+# Step 6: copy project files
 COPY . .
 
-# Pre-download sentence transformer model into the image layer
-# This runs at BUILD time so Railway never downloads 90MB at healthcheck time
-# If this fails the build fails loudly — which is correct behavior
+# Step 7: pre-download model at build time so healthcheck never waits for it
 RUN python -c "\
 from sentence_transformers import SentenceTransformer; \
-print('Downloading all-MiniLM-L6-v2...'); \
 SentenceTransformer('all-MiniLM-L6-v2'); \
-print('Model cached successfully.')"
+print('Model cached.')"
 
-# Verify the DB and embeddings are present and readable
-# If these files are missing the build fails loudly here rather than
-# silently at healthcheck time
+# Step 8: verify DB and embeddings are present
 RUN python -c "\
-import duckdb, numpy as np, os; \
-db = os.environ.get('DB_PATH', 'narrativenet.db'); \
-emb = os.environ.get('EMB_PATH', 'embeddings_cache.npz'); \
-conn = duckdb.connect(db, read_only=True); \
+import duckdb, numpy as np; \
+conn = duckdb.connect('narrativenet.db', read_only=True); \
 rows = conn.execute('SELECT COUNT(*) FROM posts').fetchone()[0]; \
 conn.close(); \
 print(f'DB OK: {rows} rows'); \
-d = np.load(emb, allow_pickle=True); \
+d = np.load('embeddings_cache.npz', allow_pickle=True); \
 print(f'Embeddings OK: {d[\"embeddings\"].shape}')"
 
-# Railway injects PORT at runtime — default to 8000 for local dev
 EXPOSE 8000
 
-# Single worker because RAM allocation:
-# - embeddings matrix (~13MB float32)
-# - sentence transformer model (~90MB)
-# - multiple workers would each allocate this, exhausting Railway free tier RAM
 CMD ["sh", "-c", "uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1 --timeout-keep-alive 75"]
