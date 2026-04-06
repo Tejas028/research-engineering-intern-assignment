@@ -8,42 +8,39 @@ Built for the SimPPL Research Engineering Internship, this dashboard ingests lar
 
 | Service | Platform | Status | URL |
 | :--- | :--- | :--- | :--- |
-| **Frontend UI** | Vercel | 🟢 Live | [https://simppl-dashboard.vercel.app](https://simppl-dashboard.vercel.app) |
-| **Backend API** | Railway | 🟢 Live | [https://research-engineering-intern-assignment-production-c0a5.up.railway.app](https://research-engineering-intern-assignment-production-c0a5.up.railway.app) |
-
-## 🎥 Project Walkthrough (Video)
-View the full demonstration on Google Drive: 👉 [Watch the Video Walkthrough](#)
+| **Frontend UI** | Vercel | 🟢 Live | [https://research-engineering-intern-assignm-seven.vercel.app/](https://research-engineering-intern-assignm-seven.vercel.app/) |
+| **Backend API** | Render | 🟢 Live | [https://narrativenet-backend.onrender.com](https://narrativenet-backend.onrender.com) |
 
 ## 🖼️ Feature Gallery
 
 ### 1. Semantic Search & AI Analysis
 Experience narrative discovery through meaning rather than keywords. Powered by **Sentence-Transformers** and **Groq (Llama 3.3)**, the system identifies thematically similar posts even with zero keyword overlap.
 
-![Semantic Search Placeholder](./docs/screenshots/search.png)
+![Semantic Search](./screenshots/Search.png)
 
 ### 2. Time Series & Intelligence Timeline
 Track the temporal pulse of specific narratives. Our **DuckDB-backed** analytical layer provides sub-second aggregation for trend analysis across thousands of documents. Clicking events in the Intelligence Timeline highlights the exact discourse window on the graph.
 
-![Time Series Placeholder](./docs/screenshots/overview.png)
+![Time Series & Timeline](./screenshots/Overview.png)
 
 ### 3. Network Topography
 A high-fidelity interaction graph showing the flow of influence. Nodes are sized by **PageRank** influence and colored by sociological cohort (**Louvain community detection**).
 
-![Network Graph Placeholder](./docs/screenshots/network.png)
+![Network Graph](./screenshots/Network.png)
 
 ### 4. Topic Clustering
 Dimensionality reduction and thematic clustering allow for a topographic map of current social discourses. Users can tune the number of clusters to find the right granularity for narrative analysis.
 
-![Topic Clusters Placeholder](./docs/screenshots/topics.png)
+![Topic Clusters](./screenshots/Topics.png)
 
 ### 5. Automated Narrative Synthesis
 An end-to-end AI-generated report that synthesizes complex datasets into a readable, journalistic long-form narrative, explaining spikes and discourse shifts in plain language.
 
-![Case Study Placeholder](./docs/screenshots/analysis.png)
+![Narrative Synthesis](./screenshots/Timeline.png)
 
 ## 🏗️ Architecture
 
-![Architecture Diagram Placeholder](./docs/screenshots/architecture.png)
+![Architecture Diagram](./screenshots/Architecture.png)
 
 ## 🛠️ Technical Stack
 
@@ -84,4 +81,4 @@ npm run dev
 - **Embedding Compute**: Semantic search depends on pre-computed embeddings. New data ingestions require a vectorization pass.
 
 ---
-Built by **Krish** for the SimPPL Research Engineering Assignment.
+Built by **Tejas** for the SimPPL Research Engineering Assignment.
