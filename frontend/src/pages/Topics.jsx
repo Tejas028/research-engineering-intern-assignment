@@ -1,10 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import axios from "axios";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { TopicCard, LoadingSkeleton, SectionHeader, InfoTooltip } from "../components/ui";
-import { getTopicPosts, getTopicInfluence } from "../api";
-
-const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
+import {
+  API_BASE_URL,
+  getTopics,
+  getTopicPosts,
+  getTopicInfluence,
+  getTopicsMapMeta,
+} from "../api";
 
 const COLORS = [
   "#4F6EF7","#34D399","#FBBF24","#EF4444","#8B5CF6",
@@ -23,6 +26,7 @@ export default function Topics() {
   const [topicPosts, setTopicPosts] = useState([]);
   const [postsLoading, setPostsLoading] = useState(false);
   const [influenceData, setInfluenceData] = useState({});
+  const [mapUrl, setMapUrl] = useState(null);
   const debounceRef = useRef(null);
 
   const fetchTopics = useCallback(async (n) => {
@@ -30,7 +34,7 @@ export default function Topics() {
     setError(null);
     setSelectedId(null);
     try {
-      const res = await axios.get(`${API}/api/topics`, { params: { nr_topics: n }, timeout: 20000 });
+      const res = await getTopics({ nr_topics: n });
       setTopics(res.data?.topics || []);
     } catch (e) {
       if (e.code === "ECONNABORTED") {
@@ -52,6 +56,16 @@ export default function Topics() {
     getTopicInfluence()
       .then(res => setInfluenceData(res.data?.influence || {}))
       .catch(() => setInfluenceData({}));
+  }, []);
+
+  useEffect(() => {
+    getTopicsMapMeta()
+      .then((res) => {
+        const nextUrl = res.data?.url;
+        if (!nextUrl) return;
+        setMapUrl(nextUrl.startsWith("http") ? nextUrl : `${API_BASE_URL}${nextUrl}`);
+      })
+      .catch(() => setMapUrl(null));
   }, []);
 
   useEffect(() => {
@@ -248,7 +262,13 @@ export default function Topics() {
       {showMap && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md animate-slide-up" onClick={() => setShowMap(false)}>
           <div className="w-full max-w-5xl h-[80vh] rounded-2xl overflow-hidden border border-[var(--border-subtle)] m-4 relative shadow-2xl" onClick={e => e.stopPropagation()}>
-            <iframe src={`${API}/api/topics/map`} className="w-full h-full bg-white" title="Topic Embedding Map" />
+            {mapUrl ? (
+              <iframe src={mapUrl} className="w-full h-full bg-white" title="Topic Embedding Map" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-[var(--bg-surface)] text-[var(--text-muted)] text-sm">
+                Topic map is not available yet.
+              </div>
+            )}
             <button onClick={() => setShowMap(false)} className="absolute top-4 right-4 bg-black/60 text-white hover:bg-black w-8 h-8 rounded-full flex items-center justify-center text-xl transition-colors">
               ×
             </button>

@@ -1,12 +1,10 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
 import {
   ComposedChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, ReferenceLine
 } from "recharts";
 import { EventRow, AIInsightBox, SectionHeader } from "../components/ui";
-
-const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
+import { getTimeseries, getEvents, postAISummary } from "../api";
 
 const CATEGORY_COLORS = {
   election: "var(--accent-primary)",
@@ -41,8 +39,8 @@ export default function Events() {
       
       try {
         const [tsRes, evRes] = await Promise.all([
-          axios.get(`${API}/api/timeseries`, { params: { granularity }, timeout: 10000 }),
-          axios.get(`${API}/api/events`, { timeout: 30000 })
+          getTimeseries({ group_by: granularity }),
+          getEvents()
         ]);
         
         if (!active) return;
@@ -69,7 +67,7 @@ export default function Events() {
         if (ts.length > 0 && evs.length > 0) {
           setSummaryLoading(true);
           try {
-            const summaryRes = await axios.post(`${API}/api/ai_summary`, {
+            const summaryRes = await postAISummary({
               context: "events_overview",
               data: {
                 total_posts: ts.reduce((s, d) => s + (d.total || 0), 0),
@@ -82,7 +80,7 @@ export default function Events() {
                   .map(e => ({ title: e.title, spike: e.spike_factor, date: e.date })),
                 granularity
               }
-            }, { timeout: 20000 });
+            });
             
             if (active) setAiSummary(summaryRes.data?.summary || null);
           } catch (e) {
