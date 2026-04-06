@@ -1,9 +1,29 @@
+import logging
 import os
+import sys
+
+# Move logging to the absolute top to catch import crashes
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
+logger = logging.getLogger(__name__)
+logger.info("=== NarrativeNet startup beginning ===")
+
+# Memory monitoring
+try:
+    import psutil
+    process = psutil.Process(os.getpid())
+    mem_info = process.memory_info()
+    logger.info(f"Startup RAM usage: {mem_info.rss // 1024 // 1024}MB (Resident Set Size)")
+except Exception:
+    logger.info("psutil memory check skipped")
+
 import json
 import datetime
 import math
 import re
-import logging
 import httpx
 from datetime import datetime, timedelta
 from contextlib import asynccontextmanager
@@ -15,21 +35,43 @@ from fastapi import FastAPI, Request, Query
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-import duckdb
-import networkx as nx
-import networkx.algorithms.community as nx_comm
-from sentence_transformers import SentenceTransformer
+# Protected heavy imports
+try:
+    import duckdb
+    logger.info("duckdb imported OK")
+except Exception as e:
+    logger.error(f"FATAL: duckdb import failed: {e}")
+    raise
+
+try:
+    import networkx as nx
+    import networkx.algorithms.community as nx_comm
+    logger.info("networkx imported OK")
+except Exception as e:
+    logger.error(f"FATAL: networkx import failed: {e}")
+    raise
+
+try:
+    from sentence_transformers import SentenceTransformer
+    logger.info("sentence_transformers imported OK")
+except Exception as e:
+    logger.error(f"FATAL: sentence_transformers import failed: {e}")
+    raise
+
+try:
+    import numpy as np
+    from numpy.linalg import norm
+    logger.info("numpy imported OK")
+except Exception as e:
+    logger.error(f"FATAL: numpy import failed: {e}")
+    raise
+
 from langdetect import detect, DetectorFactory
 from groq import Groq
-import numpy as np
-from numpy.linalg import norm
 from collections import Counter, defaultdict
 
 # Ensure reproducible langdetect
 DetectorFactory.seed = 0
-
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
-logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_PATH           = os.environ.get("DB_PATH",    os.path.join(PROJECT_ROOT, "narrativenet.db"))

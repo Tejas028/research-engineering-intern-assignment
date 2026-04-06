@@ -15,3 +15,4 @@ scikit-learn==1.5.1
 
 datamapplot
 matplotlib==3.9.2
+psutil==5.9.8
