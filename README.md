@@ -16,31 +16,31 @@ Built for the SimPPL Research Engineering Internship, this dashboard ingests lar
 ### 1. Semantic Search & AI Analysis
 Experience narrative discovery through meaning rather than keywords. Powered by **Sentence-Transformers** and **Groq (Llama 3.3)**, the system identifies thematically similar posts even with zero keyword overlap.
 
-![Semantic Search](./screenshots/Search.png)
+![Semantic Search](./Screenshots/Search.png)
 
 ### 2. Time Series & Intelligence Timeline
 Track the temporal pulse of specific narratives. Our **DuckDB-backed** analytical layer provides sub-second aggregation for trend analysis across thousands of documents. Clicking events in the Intelligence Timeline highlights the exact discourse window on the graph.
 
-![Time Series & Timeline](./screenshots/Overview.png)
+![Time Series & Timeline](./Screenshots/Overview.png)
 
 ### 3. Network Topography
 A high-fidelity interaction graph showing the flow of influence. Nodes are sized by **PageRank** influence and colored by sociological cohort (**Louvain community detection**).
 
-![Network Graph](./screenshots/Network.png)
+![Network Graph](./Screenshots/Network.png)
 
 ### 4. Topic Clustering
 Dimensionality reduction and thematic clustering allow for a topographic map of current social discourses. Users can tune the number of clusters to find the right granularity for narrative analysis.
 
-![Topic Clusters](./screenshots/Topics.png)
+![Topic Clusters](./Screenshots/Topics.png)
 
 ### 5. Automated Narrative Synthesis
 An end-to-end AI-generated report that synthesizes complex datasets into a readable, journalistic long-form narrative, explaining spikes and discourse shifts in plain language.
 
-![Narrative Synthesis](./screenshots/Timeline.png)
+![Narrative Synthesis](./Screenshots/Timeline.png)
 
 ## 🏗️ Architecture
 
-![Architecture Diagram](./screenshots/Architecture.png)
+![Architecture Diagram](./Screenshots/Architecture.png)
 
 ## 🛠️ Technical Stack
 
