@@ -114,8 +114,12 @@ async def lifespan(app: FastAPI):
         with get_con() as c:
             res = c.execute("SELECT COUNT(*) FROM posts").fetchone()
             db_rows = res[0]
+            logger.info(f"DATABASE VERIFIED: {db_rows} rows found in 'posts' table.")
+            
+            if db_rows == 0:
+                logger.warning("!!! WARNING: Database is EMPTY. Dashboard will show no data. !!!")
     except Exception as e:
-        logger.error(f"Error opening DB: {e}")
+        logger.error(f"FATAL: Error opening DB: {e}")
         db_rows = 0
 
     # 2. Load embeddings
@@ -160,9 +164,9 @@ _ORIGINS = ["*"] if _RAW_ORIGINS == "*" else [o.strip() for o in _RAW_ORIGINS.sp
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_ORIGINS,
-    allow_credentials=False,          # must be False when allow_origins includes "*"
-    allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type", "Authorization"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
 )
 
 @app.middleware("http")
@@ -186,10 +190,10 @@ def empty_response():
 
 @app.get("/")
 def root():
-    return JSONResponse(content={"status": "ok"})
-
+    return JSONResponse(content={"status": "ok", "service": "NarrativeNet API"})
 
 @app.get("/health")
+@app.get("/api/health")
 def health():
     try:
         with get_con() as c:
@@ -204,6 +208,92 @@ def health():
         "embeddings_loaded": embeddings_loaded,
         "model_loaded": model_loaded
     })
+
+@app.get("/api/stats")
+def get_stats():
+    """Returns global aggregate statistics for the dashboard."""
+    try:
+        with get_con() as con:
+            res = con.execute("""
+                SELECT 
+                    COUNT(*) as total_posts,
+                    COUNT(DISTINCT author) as unique_authors,
+                    COUNT(DISTINCT subreddit) as subreddit_count,
+                    AVG(score) as avg_score,
+                    AVG(num_comments) as avg_comments,
+                    AVG(CASE WHEN is_external_link THEN 1.0 ELSE 0.0 END) as external_link_ratio
+                FROM posts
+            """).fetchone()
+            
+            if not res or res[0] == 0:
+                return JSONResponse(content={
+                    "total_posts": 0, "unique_authors": 0, "subreddit_count": 0,
+                    "avg_score": 0, "avg_comments": 0, "external_link_ratio": 0
+                })
+                
+            return JSONResponse(content={
+                "total_posts": res[0],
+                "unique_authors": res[1],
+                "subreddit_count": res[2],
+                "avg_score": round(res[3] or 0, 2),
+                "avg_comments": round(res[4] or 0, 2),
+                "external_link_ratio": round(res[5] or 0, 4)
+            })
+    except Exception as e:
+        logger.error(f"Error in get_stats: {e}")
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+@app.get("/api/posts")
+def get_posts(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    subreddit: str = None,
+    sort_by: str = Query("score", enum=["score", "created_utc", "num_comments"])
+):
+    """Returns a paginated list of posts."""
+    try:
+        where_clause = ""
+        params = []
+        if subreddit:
+            where_clause = "WHERE subreddit = ?"
+            params.append(subreddit)
+            
+        offset = (page - 1) * per_page
+        
+        with get_con() as con:
+            # Get total count for pagination
+            total = con.execute(f"SELECT COUNT(*) FROM posts {where_clause}", params).fetchone()[0]
+            
+            # Get data
+            sql = f"""
+                SELECT id, title, author, subreddit, score, num_comments, url, created_utc, 
+                       is_external_link, domain, ideological_group
+                FROM posts
+                {where_clause}
+                ORDER BY {sort_by} DESC
+                LIMIT ? OFFSET ?
+            """
+            rows = con.execute(sql, params + [per_page, offset]).fetchall()
+            
+            cols = ["id", "title", "author", "subreddit", "score", "num_comments", "url", 
+                    "created_utc", "is_external_link", "domain", "ideological_group"]
+            
+            posts = []
+            for r in rows:
+                p = dict(zip(cols, r))
+                p["created_utc"] = str(p["created_utc"])
+                posts.append(p)
+                
+            return JSONResponse(content={
+                "posts": posts,
+                "total": total,
+                "page": page,
+                "per_page": per_page,
+                "pages": math.ceil(total / per_page) if total > 0 else 0
+            })
+    except Exception as e:
+        logger.error(f"Error in get_posts: {e}")
+        return JSONResponse(content={"error": str(e)}, status_code=500)
 
 @app.get("/api/overview")
 def get_overview():

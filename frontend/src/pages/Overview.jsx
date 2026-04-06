@@ -106,7 +106,7 @@ export default function Overview() {
         <StatCard label="Unique Authors" value={overview?.unique_authors || 0} sublabel="flagged accounts" loading={!overview} />
         <StatCard label="Avg Score" value={overview?.avg_score || 0} sublabel="points per post" loading={!overview} />
         <StatCard label="Avg Comments" value={overview?.avg_comments || 0} sublabel="comments per post" loading={!overview} />
-        <StatCard label="External Links" value={overview?.external_link_ratio ? `${(overview.external_link_ratio * 100).toFixed(1)}%` : "14.2%"} trend="down" sublabel="link frequency" loading={!overview} />
+        <StatCard label="External Links" value={overview?.external_link_ratio ? `${(overview.external_link_ratio * 100).toFixed(1)}%` : "0.0%"} trend="down" sublabel="link frequency" loading={!overview} />
       </div>
 
       {/* Row 2 */}

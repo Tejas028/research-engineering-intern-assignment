@@ -80,7 +80,7 @@ export default function Topics() {
       <div className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] p-5 rounded-2xl space-y-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <SectionHeader title="Topic Clusters" subtitle="BERTopic · all-MiniLM-L6-v2 · 8,799 posts"/>
+            <SectionHeader title="Topic Clusters" subtitle="BERTopic · Semantic Embedding Clustering"/>
             <InfoTooltip content="BERTopic groups posts by semantic meaning using sentence embeddings, not keyword matching. Each cluster is a distinct narrative thread. Cluster size = number of posts. Influence score = PageRank-weighted author activity in that cluster." />
           </div>
           <button onClick={() => setShowMap(true)} className="bg-[var(--bg-elevated)] hover:bg-[var(--border-subtle)] text-[var(--text-primary)] text-[12px] px-4 py-2.5 rounded-lg border border-[var(--border-subtle)] transition-colors font-medium">

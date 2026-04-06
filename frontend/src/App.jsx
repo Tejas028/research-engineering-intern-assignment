@@ -58,9 +58,9 @@ function AppContent() {
 
         <div className="p-6 mt-auto">
           <div className="font-mono text-[10px] text-[var(--text-muted)] leading-relaxed">
-            8,799 posts<br/>
-            10 subreddits<br/>
-            10 authors flagged
+            Live Content Feed<br/>
+            Multi-subreddit Scan<br/>
+            Automated Flagging
           </div>
         </div>
       </aside>
