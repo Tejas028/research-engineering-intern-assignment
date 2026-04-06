@@ -1,71 +1,42 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { TopicCard, LoadingSkeleton, SectionHeader, InfoTooltip } from "../components/ui";
-import {
-  API_BASE_URL,
-  getTopics,
-  getTopicPosts,
-  getTopicInfluence,
-  getTopicsMapMeta,
-} from "../api";
+import { useState, useEffect, useCallback } from "react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { TopicCard, LoadingSkeleton, SectionHeader, Card } from "../components/ui";
+import { getTopics, getTopicPosts, getTopicInfluence } from "../api";
+import { Layers, Target, TrendingUp, ExternalLink } from "lucide-react";
 
 const COLORS = [
-  "#4F6EF7","#34D399","#FBBF24","#EF4444","#8B5CF6",
-  "#06B6D4","#F87171","#84CC16","#EC4899","#14B8A6",
-  "#A855F7","#F43F5E"
+  "#4F6EF7","#34D399","#FBBF24","#E24B4A","#8B5CF6",
+  "#06B6D4","#F87171","#84CC16","#EC4899","#14B8A6"
 ];
 
 export default function Topics() {
-  const [nrTopics, setNrTopics] = useState(10);
+  const [nrTopics, setNrTopics] = useState(12);
   const [topics, setTopics] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState(null);
-  const [showMap, setShowMap] = useState(false);
-  const [sortBy, setSortBy] = useState("count");
   const [topicPosts, setTopicPosts] = useState([]);
   const [postsLoading, setPostsLoading] = useState(false);
   const [influenceData, setInfluenceData] = useState({});
-  const [mapUrl, setMapUrl] = useState(null);
-  const debounceRef = useRef(null);
 
   const fetchTopics = useCallback(async (n) => {
     setLoading(true);
-    setError(null);
-    setSelectedId(null);
     try {
       const res = await getTopics({ nr_topics: n });
       setTopics(res.data?.topics || []);
     } catch (e) {
-      if (e.code === "ECONNABORTED") {
-        setError("Request timed out — clustering can take a moment. Try again.");
-      } else {
-        setError(e.response?.data?.error || "Failed to load topics.");
-      }
+      console.error(e);
       setTopics([]);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    fetchTopics(nrTopics);
-  }, []);
+  useEffect(() => { fetchTopics(nrTopics); }, [nrTopics, fetchTopics]);
 
   useEffect(() => {
     getTopicInfluence()
       .then(res => setInfluenceData(res.data?.influence || {}))
       .catch(() => setInfluenceData({}));
-  }, []);
-
-  useEffect(() => {
-    getTopicsMapMeta()
-      .then((res) => {
-        const nextUrl = res.data?.url;
-        if (!nextUrl) return;
-        setMapUrl(nextUrl.startsWith("http") ? nextUrl : `${API_BASE_URL}${nextUrl}`);
-      })
-      .catch(() => setMapUrl(null));
   }, []);
 
   useEffect(() => {
@@ -77,101 +48,57 @@ export default function Topics() {
       .finally(() => setPostsLoading(false));
   }, [selectedId, nrTopics]);
 
-  const totalPosts = topics.reduce((s, t) => s + t.count, 0);
-  
-  const sortedTopics = [...topics].sort((a, b) => {
-    if (sortBy === "count") return b.count - a.count;
-    return a.topic_id - b.topic_id;
-  });
-
   const selectedTopic = topics.find(t => t.topic_id === selectedId);
-  const selectedIndex = topics.findIndex(t => t.topic_id === selectedId);
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col xl:flex-row gap-10">
       
-      {/* Controls */}
-      <div className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] p-5 rounded-2xl space-y-5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <SectionHeader title="Topic Clusters" subtitle="BERTopic · Semantic Embedding Clustering"/>
-            <InfoTooltip content="BERTopic groups posts by semantic meaning using sentence embeddings, not keyword matching. Each cluster is a distinct narrative thread. Cluster size = number of posts. Influence score = PageRank-weighted author activity in that cluster." />
-          </div>
-          <button onClick={() => setShowMap(true)} className="bg-[var(--bg-elevated)] hover:bg-[var(--border-subtle)] text-[var(--text-primary)] text-[12px] px-4 py-2.5 rounded-lg border border-[var(--border-subtle)] transition-colors font-medium">
-            View Embedding Map (UMAP)
-          </button>
-        </div>
-        
-        <div className="flex items-center gap-4">
-          <input
-            type="range"
-            min={5}
-            max={50}
-            step={5}
-            value={nrTopics}
-            onChange={(e) => {
-              const val = Number(e.target.value);
-              setNrTopics(val);
-              clearTimeout(debounceRef.current);
-              debounceRef.current = setTimeout(() => fetchTopics(val), 400);
-            }}
-            className="w-full"
+      {/* LEFT: TOPIC EXPLORER */}
+      <div className="flex-1 space-y-8">
+        <header>
+          <SectionHeader 
+            badge="Semantic Clustering"
+            title="Narrative Clusters" 
+            subtitle="Thematic grouping via LDA & BERTopic embeddings"
           />
-        </div>
-        
-        <div className="flex items-center gap-2">
-          {[5, 10, 20, 30, 50].map((n) => (
-            <button
-              key={n}
-              onClick={() => {
-                setNrTopics(n);
-                clearTimeout(debounceRef.current);
-                fetchTopics(n);
-              }}
-              className={`text-[11px] px-3 py-1 rounded-full border transition-colors ${nrTopics === n ? "bg-[var(--accent-primary)] border-[var(--accent-primary)] text-white" : "bg-[var(--bg-elevated)] border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--border-active)] hover:text-[var(--text-primary)]"}`}
-            >
-              {n}
-            </button>
-          ))}
-        </div>
-      </div>
+        </header>
 
-      <div className="flex items-center justify-between px-1">
-        <p className="text-[var(--text-secondary)] text-[12px]">
-          Showing {topics.length} clusters <span className="mx-1">•</span> {totalPosts.toLocaleString()} posts indexed
-        </p>
-        <div className="flex items-center gap-2 bg-[var(--bg-elevated)] p-1 rounded-md border border-[var(--border-subtle)]">
-          <button onClick={() => setSortBy("count")} className={`text-[11px] px-2.5 py-1 rounded transition-colors ${sortBy === "count" ? "bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-sm" : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"}`}>By post count</button>
-          <button onClick={() => setSortBy("id")} className={`text-[11px] px-2.5 py-1 rounded transition-colors ${sortBy === "id" ? "bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-sm" : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"}`}>By cluster ID</button>
+        {/* Controls */}
+        <div className="flex items-center gap-4 pb-6 border-b border-white/5">
+           <span className="font-mono text-[10px] text-white/30 uppercase tracking-widest mr-2">Resolution:</span>
+           <div className="flex gap-2">
+            {[8, 12, 20, 32].map(n => (
+              <button
+                key={n}
+                onClick={() => setNrTopics(n)}
+                className={`
+                  px-4 py-1.5 rounded-xl font-mono text-[10px] transition-all
+                  ${nrTopics === n 
+                    ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" 
+                    : "bg-white/5 text-white/30 hover:text-white/60 hover:bg-white/10"}
+                `}
+              >
+                {n} CLUSTERS
+              </button>
+            ))}
+           </div>
         </div>
-      </div>
 
-      {error && (
-        <div className="border border-[var(--accent-danger)]/50 bg-[var(--accent-danger)]/10 text-[var(--accent-danger)] p-4 rounded-xl text-sm">
-          {error}
-        </div>
-      )}
-
-      {/* Main Grid / Detail Layout */}
-      <div className="flex flex-col lg:flex-row gap-6 relative">
-        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 flex-1 items-start content-start`}>
+        {/* Topic Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {loading ? (
-            Array.from({ length: Math.min(nrTopics, 12) }).map((_, i) => (
-              <LoadingSkeleton key={i} height={160} className="rounded-xl" />
-            ))
+            Array.from({ length: 9 }).map((_, i) => <LoadingSkeleton key={i} height={180} className="rounded-2xl" />)
           ) : (
-            sortedTopics.map((t, i) => {
-              const origIndex = topics.findIndex(orig => orig.topic_id === t.topic_id);
-              const color = COLORS[origIndex % COLORS.length];
+            topics.map((t, i) => {
+              const color = COLORS[i % COLORS.length];
               const isSelected = selectedId === t.topic_id;
-              
               const influenceList = influenceData[String(nrTopics)] || [];
               const inf = influenceList.find(x => x.topic_id === t.topic_id);
               const infScore = inf ? inf.influence_score : 0;
 
               return (
-                <div key={t.topic_id}>
-                  <TopicCard 
+                <div key={t.topic_id} className="group relative">
+                   <TopicCard 
                     label={t.label}
                     words={t.words}
                     count={t.count}
@@ -180,13 +107,9 @@ export default function Topics() {
                     onClick={() => setSelectedId(isSelected ? null : t.topic_id)}
                   />
                   {infScore > 0 && (
-                    <div style={{
-                      marginTop: 4, padding: "2px 8px", fontFamily: "JetBrains Mono",
-                      fontSize: 10, color: "var(--accent-warn)",
-                      display: "flex", alignItems: "center", gap: 4
-                    }}>
-                      <span>▲</span>
-                      <span>Influence: {(infScore * 1000).toFixed(1)}</span>
+                    <div className="absolute bottom-4 right-4 flex items-center gap-1.5 font-mono text-[9px] text-yellow-500/80">
+                      <TrendingUp size={10} />
+                      <span>{(infScore * 1000).toFixed(1)}</span>
                     </div>
                   )}
                 </div>
@@ -194,87 +117,83 @@ export default function Topics() {
             })
           )}
         </div>
-
-        {/* Detail Panel */}
-        {selectedTopic && (
-          <div className="lg:w-80 bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-2xl p-5 self-start sticky top-6 shadow-xl z-10 animate-slide-up">
-            <div className="flex items-start justify-between mb-6">
-              <h3 className="text-[var(--text-primary)] font-semibold text-[14px] pr-4 leading-snug">{selectedTopic.label}</h3>
-              <button onClick={() => setSelectedId(null)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] text-xs whitespace-nowrap bg-[var(--bg-elevated)] px-2 py-1 rounded">✕</button>
-            </div>
-            
-            <div className="h-[260px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={selectedTopic.words.slice(0, 10).map((w, i) => ({ word: w, rank: 10 - i }))} layout="vertical" margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
-                  <XAxis type="number" hide />
-                  <YAxis type="category" dataKey="word" width={90} tick={{ fontSize: 11, fill: "var(--text-secondary)", fontFamily: "JetBrains Mono" }} axisLine={false} tickLine={false} />
-                  <Tooltip cursor={{ fill: "var(--bg-elevated)" }} formatter={(value, name, props) => [`Rank ${11 - value}`, "Importance"]} contentStyle={{ backgroundColor: "var(--bg-surface)", borderColor: "var(--border-active)", borderRadius: "8px", fontSize: "12px", color: "var(--text-primary)", boxShadow: "0 4px 12px rgba(0,0,0,0.3)" }} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div style={{ marginTop: 16, borderTop: "1px solid var(--border-subtle)", paddingTop: 16 }}>
-              <div style={{
-                fontFamily: "JetBrains Mono", fontSize: 10, color: "var(--text-muted)",
-                textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10
-              }}>Representative Posts</div>
-              {postsLoading && [1,2,3].map(i => (
-                <LoadingSkeleton key={i} height={56} className="rounded-lg mb-2" />
-              ))}
-              {!postsLoading && topicPosts.length === 0 && (
-                <div style={{ fontSize: 12, color: "var(--text-muted)" }}>No posts cached for this cluster.</div>
-              )}
-              {!postsLoading && topicPosts.map(p => (
-                <a key={p.id} href={p.url} target="_blank" rel="noopener noreferrer"
-                  style={{ display: "block", textDecoration: "none", marginBottom: 8,
-                    background: "var(--bg-elevated)", borderRadius: 8, padding: "8px 10px",
-                    border: "1px solid var(--border-subtle)", transition: "all 150ms" }}
-                  onMouseEnter={e => e.currentTarget.style.borderColor = "var(--border-active)"}
-                  onMouseLeave={e => e.currentTarget.style.borderColor = "var(--border-subtle)"}>
-                  <div style={{ fontSize: 11, fontWeight: 500, color: "var(--text-primary)",
-                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 4 }}>
-                    {p.title}
-                  </div>
-                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 10,
-                      background: "var(--bg-surface)", color: "var(--text-muted)",
-                      padding: "1px 6px", borderRadius: 4 }}>{p.subreddit}</span>
-                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 10,
-                      color: "var(--text-muted)" }}>↑{p.score}</span>
-                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 10,
-                      color: "var(--text-muted)", marginLeft: "auto" }}>{p.created_utc}</span>
-                  </div>
-                </a>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
-      <div className="text-[10px] font-mono text-[var(--text-muted)] space-y-1.5 pt-12 opacity-80">
-        <p>MODEL · BERTopic with all-MiniLM-L6-v2 (384-dim) sentence embeddings</p>
-        <p>DIM REDUCTION · UMAP (n_neighbors=15, min_dist=0.0, n_components=5, random_state=42)</p>
-        <p>CLUSTERING · HDBSCAN (min_cluster_size=10, metric=euclidean)</p>
-        <p>REPR · c-TF-IDF with CountVectorizer (stop_words=english, max_features=10000)</p>
-        <p>VIZ · Datamapplot UMAP 2D projection served from /static/topic_map.html</p>
-      </div>
+      {/* RIGHT: DRILLDOWN PANEL */}
+      <aside className="w-full xl:w-[400px] flex-shrink-0 space-y-6">
+        <div className="h-screen sticky top-12 overflow-y-auto pb-20 scrollbar-hide">
+          {!selectedTopic ? (
+             <Card className="p-10 text-center border-dashed border-white/10 bg-transparent flex flex-col items-center justify-center min-h-[400px]">
+                <Layers className="text-white/10 mb-6" size={48} strokeWidth={1} />
+                <p className="font-mono text-[12px] text-white/30 leading-relaxed max-w-[200px]">
+                  Select a narrative cluster to analyze word distributions and discourse metadata.
+                </p>
+             </Card>
+          ) : (
+            <div className="space-y-6 animate-slide-up">
+              {/* Significance Bar Chart */}
+              <Card className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="font-serif text-xl font-bold text-white">{selectedTopic.label}</h3>
+                  <button onClick={() => setSelectedId(null)} className="text-white/20 hover:text-white/50 transition-colors">✕</button>
+                </div>
 
-      {showMap && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md animate-slide-up" onClick={() => setShowMap(false)}>
-          <div className="w-full max-w-5xl h-[80vh] rounded-2xl overflow-hidden border border-[var(--border-subtle)] m-4 relative shadow-2xl" onClick={e => e.stopPropagation()}>
-            {mapUrl ? (
-              <iframe src={mapUrl} className="w-full h-full bg-white" title="Topic Embedding Map" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-[var(--bg-surface)] text-[var(--text-muted)] text-sm">
-                Topic map is not available yet.
+                <div className="h-[280px] mb-4">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={selectedTopic.words.slice(0, 10).map((w, i) => ({ word: w, val: 10 - i }))} layout="vertical">
+                      <XAxis type="number" hide />
+                      <YAxis 
+                        type="category" 
+                        dataKey="word" 
+                        width={80} 
+                        tick={{ fontSize: 10, fill: "rgba(255,255,255,0.4)", fontFamily: "DM Mono" }} 
+                        axisLine={false} 
+                        tickLine={false} 
+                      />
+                      <Tooltip cursor={{ fill: "rgba(255,255,255,0.03)" }} contentStyle={{ backgroundColor: "#080808", border: "1px solid #222", borderRadius: "8px" }} />
+                      <Bar dataKey="val" fill="rgba(59,130,246,0.3)" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="font-mono text-[9px] text-white/20 uppercase tracking-widest text-center">
+                  Keyword Significance (c-TF-IDF Weighting)
+                </div>
+              </Card>
+
+              {/* Representative Content Feed */}
+              <div className="space-y-4">
+                 <div className="flex items-center gap-2 px-2 font-mono text-[10px] text-white/30 uppercase tracking-[0.2em]">
+                    <Target size={12} className="text-blue-500" /> Representative Content
+                 </div>
+                 
+                 {postsLoading ? (
+                   [1,2,3].map(i => <LoadingSkeleton key={i} height={80} className="rounded-xl" />)
+                 ) : (
+                   <div className="space-y-3">
+                     {topicPosts.map(p => (
+                       <Card key={p.id} className="p-4 group">
+                         <a href={p.url} target="_blank" rel="noopener noreferrer" className="block">
+                            <div className="font-sans text-[14px] font-medium text-white/80 group-hover:text-white leading-snug mb-3 transition-colors">
+                              {p.title}
+                            </div>
+                            <div className="flex items-center justify-between">
+                               <div className="flex items-center gap-3">
+                                  <span className="font-mono text-[9px] text-orange-400/80 px-2 py-0.5 bg-orange-500/10 rounded">r/{p.subreddit}</span>
+                                  <span className="font-mono text-[9px] text-white/20">↑{p.score}</span>
+                               </div>
+                               <ExternalLink size={10} className="text-white/10 group-hover:text-white/40 mb-1" />
+                            </div>
+                         </a>
+                       </Card>
+                     ))}
+                   </div>
+                 )}
               </div>
-            )}
-            <button onClick={() => setShowMap(false)} className="absolute top-4 right-4 bg-black/60 text-white hover:bg-black w-8 h-8 rounded-full flex items-center justify-center text-xl transition-colors">
-              ×
-            </button>
-          </div>
+            </div>
+          )}
         </div>
-      )}
+      </aside>
+
     </div>
   );
 }

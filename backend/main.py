@@ -185,7 +185,7 @@ def round_floats(obj):
     return obj
 
 def empty_response():
-    return JSONResponse(content={"data": [], "message": "No results found"})
+    return JSONResponse(content={"series": [], "events": [], "data": [], "message": "No results found"})
 
 
 @app.get("/")
@@ -974,6 +974,18 @@ async def get_events():
         evs = await _fetch_wiki_month(year, month)
         logger.info(f"Fetched {len(evs)} events for {year}-{month}")
         all_events.extend(evs)
+
+    # Filter events to database range
+    try:
+        with get_con() as conn:
+            range_res = conn.execute("SELECT MIN(created_utc), MAX(created_utc) FROM posts").fetchone()
+            if range_res and range_res[0] and range_res[1]:
+                min_db_date = str(range_res[0])[:10]
+                max_db_date = str(range_res[1])[:10]
+                all_events = [e for e in all_events if min_db_date <= e["date"] <= max_db_date]
+                logger.info(f"Filtered events to DB range [{min_db_date} to {max_db_date}]. Remaining: {len(all_events)}")
+    except Exception as e:
+        logger.warning(f"[events] Database range filter failed: {e}")
 
     all_events.sort(key=lambda x: x["date"])
     all_events = _add_spike_factors(all_events)

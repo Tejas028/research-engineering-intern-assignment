@@ -1,43 +1,53 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --bg-base:        #080B11;
-  --bg-surface:     #0F1420;
-  --bg-elevated:    #161D2E;
-  --border-subtle:  #1E2A3A;
-  --border-active:  #2A3F5F;
-  --accent-primary: #4F6EF7;
+  /* Backgrounds — pure black editorial */
+  --bg-base:        #0a0a0a;
+  --bg-surface:     #0d0d0d;
+  --bg-elevated:    #111111;
+
+  /* Borders */
+  --border-subtle:  rgba(255,255,255,0.08);
+  --border-active:  rgba(255,255,255,0.18);
+
+  /* Accent palette */
+  --accent-primary: #378ADD;
   --accent-left:    #60A5FA;
-  --accent-right:   #F87171;
-  --accent-center:  #34D399;
-  --accent-warn:    #FBBF24;
-  --accent-danger:  #EF4444;
-  --text-primary:   #F1F5F9;
-  --text-secondary: #94A3B8;
-  --text-muted:     #475569;
-  --text-mono:      #64748B;
+  --accent-right:   #E24B4A;
+  --accent-center:  #1D9E75;
+  --accent-warn:    #BA7517;
+  --accent-danger:  #E24B4A;
+
+  /* Text scale */
+  --text-primary:   #ffffff;
+  --text-secondary: rgba(255,255,255,0.6);
+  --text-muted:     rgba(255,255,255,0.4);
+  --text-mono:      rgba(255,255,255,0.4);
 }
 
 body {
   background-color: var(--bg-base);
   color: var(--text-primary);
-  font-family: 'Inter', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 * { box-sizing: border-box; }
 
+/* Scrollbars — thin editorial */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
-::-webkit-scrollbar-track { background: var(--bg-surface); }
-::-webkit-scrollbar-thumb { background: var(--border-active); border-radius: 2px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
 
+/* Keyframes */
 @keyframes shimmer {
-  0%   { background-position: -400px 0; }
-  100% { background-position: 400px 0; }
+  0%   { opacity: 0.4; }
+  50%  { opacity: 0.7; }
+  100% { opacity: 0.4; }
 }
 
 @keyframes pulse-dot {
@@ -55,35 +65,64 @@ body {
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* Skeleton — flat, no gradient */
 .shimmer {
-  background: linear-gradient(
-    90deg,
-    var(--bg-surface) 0px,
-    var(--bg-elevated) 80px,
-    var(--bg-surface) 160px
-  );
-  background-size: 400px 100%;
-  animation: shimmer 1.5s infinite linear;
+  background: rgba(255,255,255,0.04);
+  animation: shimmer 1.8s ease-in-out infinite;
 }
 
 .pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
 .slide-up  { animation: slide-up 200ms ease-out forwards; }
 
+/* Global interactive transition */
+button, a, [role="button"] {
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+
+/* Form controls */
 input[type="range"] {
   accent-color: var(--accent-primary);
   height: 4px;
 }
 
 select {
-  background-color: var(--bg-elevated);
-  border: 1px solid var(--border-subtle);
-  color: var(--text-primary);
-  border-radius: 8px;
-  padding: 6px 10px;
-  font-size: 12px;
-  font-family: 'Inter', sans-serif;
+  background-color: #0d0d0d;
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #ffffff;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-family: 'DM Mono', monospace;
   outline: none;
   cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='rgba(255,255,255,0.4)'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 14px;
 }
 
-select:focus { border-color: var(--accent-primary); }
+select:focus { 
+  border-color: rgba(255,255,255,0.25); 
+}
+
+option {
+  background-color: #0d0d0d;
+  color: #ffffff;
+}
+
+/* Utility: DM Mono font */
+.font-mono {
+  font-family: 'DM Mono', monospace !important;
+}
+
+/* Utility: Playfair Display */
+.font-serif {
+  font-family: 'Playfair Display', serif !important;
+}
+
+/* Utility: DM Sans */
+.font-sans {
+  font-family: 'DM Sans', sans-serif !important;
+}
