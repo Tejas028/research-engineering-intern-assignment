@@ -1,261 +1,599 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 
-// Animation for numbers
+// ─── Typewriter hook ────────────────────────────────────────────────────────
+function useTypewriter(text, speed = 12) {
+  const [displayed, setDisplayed] = useState('');
+  const intervalRef = useRef(null);
+
+  useEffect(() => {
+    setDisplayed('');
+    if (!text) return;
+    let i = 0;
+    clearInterval(intervalRef.current);
+    intervalRef.current = setInterval(() => {
+      i++;
+      setDisplayed(text.slice(0, i));
+      if (i >= text.length) clearInterval(intervalRef.current);
+    }, speed);
+    return () => clearInterval(intervalRef.current);
+  }, [text, speed]);
+
+  return displayed;
+}
+
+// ─── Counter animation ───────────────────────────────────────────────────────
 function useCounter(value) {
   const [displayValue, setDisplayValue] = useState(0);
-  
+
   useEffect(() => {
     let target = parseFloat(value);
-    if (isNaN(target)) {
-      setDisplayValue(value);
-      return;
-    }
+    if (isNaN(target)) { setDisplayValue(value); return; }
     let start = 0;
     const duration = 600;
     const startTime = performance.now();
-    
+
     const update = (time) => {
       let progress = (time - startTime) / duration;
       if (progress > 1) progress = 1;
       let ease = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
       const strVal = value.toString();
-      
       if (strVal.includes('.') || strVal.includes('%')) {
         let isPercent = strVal.includes('%');
         let raw = target * ease;
-        if (strVal.includes('.') && !isPercent) {
-          setDisplayValue(raw.toFixed(1));
-        } else if (isPercent) {
-          setDisplayValue(raw.toFixed(1) + '%');
-        } else {
-          setDisplayValue(Math.floor(raw));
-        }
+        if (strVal.includes('.') && !isPercent) setDisplayValue(raw.toFixed(1));
+        else if (isPercent) setDisplayValue(raw.toFixed(1) + '%');
+        else setDisplayValue(Math.floor(raw));
       } else {
         setDisplayValue(Math.floor(target * ease));
       }
-      
       if (progress < 1) requestAnimationFrame(update);
       else setDisplayValue(value);
     };
-    
     requestAnimationFrame(update);
   }, [value]);
-  
+
   return displayValue;
 }
 
-// Loading Skeleton
+// ─── LoadingSkeleton ─────────────────────────────────────────────────────────
 export const LoadingSkeleton = ({ height, className = "" }) => (
-  <div className={`shimmer w-full ${className}`} style={{ height: typeof height === 'number' ? `${height}px` : height }}></div>
+  <div
+    className={`shimmer w-full rounded ${className}`}
+    style={{ height: typeof height === 'number' ? `${height}px` : height }}
+  />
 );
 
-// StatCard
-export const StatCard = ({ label, value, sublabel, trend, loading }) => {
+// ─── StatCard ────────────────────────────────────────────────────────────────
+export const StatCard = ({ label, value, sublabel, delta, deltaLabel, trend, loading }) => {
   const displayValue = useCounter(value);
-  
+
   return (
-    <div className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-xl p-5 hover:border-[var(--border-active)] hover:-translate-y-0.5 hover:shadow-[0_0_0_1px_rgba(79,110,247,0.2)] transition-all duration-150 relative overflow-hidden group">
+    <div style={{
+      background: "rgba(255,255,255,0.04)",
+      border: "1px solid rgba(255,255,255,0.1)",
+      borderRadius: 8,
+      padding: 12,
+      transition: "background 0.12s ease",
+    }}>
       {loading ? (
-        <div className="flex flex-col space-y-3">
-          <LoadingSkeleton height={12} className="rounded w-1/3" />
-          <LoadingSkeleton height={28} className="rounded w-1/2" />
-          <LoadingSkeleton height={12} className="rounded w-2/3" />
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <LoadingSkeleton height={10} className="w-1/3" />
+          <LoadingSkeleton height={24} className="w-1/2" />
+          <LoadingSkeleton height={10} className="w-2/3" />
         </div>
       ) : (
         <>
-          <div className="uppercase font-mono text-[10px] text-[var(--text-mono)] mb-2 font-medium tracking-wider">{label}</div>
-          <div className="text-2xl font-bold text-[var(--text-primary)] mb-1 flex items-baseline gap-2 font-sans">
-            <span className="animate-[slide-up_200ms_ease-out]">{typeof value === 'number' || !isNaN(parseFloat(value)) ? displayValue : value}</span>
-            {trend === 'up' && <span className="text-[14px] text-[var(--accent-center)]">↑</span>}
-            {trend === 'down' && <span className="text-[14px] text-[var(--accent-danger)]">↓</span>}
+          <div style={{
+            fontFamily: "'DM Mono', monospace",
+            fontSize: 11,
+            color: "rgba(255,255,255,0.4)",
+            textTransform: "uppercase",
+            letterSpacing: "0.08em",
+            marginBottom: 8,
+          }}>
+            {label}
           </div>
-          {sublabel && <div className="text-[11px] text-[var(--text-muted)] truncate">{sublabel}</div>}
+          <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 4 }}>
+            <span style={{
+              fontFamily: "'DM Sans', sans-serif",
+              fontSize: 28,
+              fontWeight: 500,
+              color: "#ffffff",
+              lineHeight: 1,
+            }}>
+              {typeof value === 'number' || !isNaN(parseFloat(value)) ? displayValue : value}
+            </span>
+            {delta !== undefined && (
+              <span style={{ 
+                fontFamily: "'DM Mono', monospace", 
+                fontSize: 10, 
+                color: delta >= 0 ? "#4ade80" : "#f87171",
+                marginLeft: 4
+              }}>
+                {delta >= 0 ? '+' : ''}{delta}%
+              </span>
+            )}
+          </div>
+          {(sublabel || deltaLabel) && (
+            <div style={{
+              fontFamily: "'DM Mono', monospace",
+              fontSize: 11,
+              color: "rgba(255,255,255,0.35)",
+            }}>
+              {deltaLabel || sublabel}
+            </div>
+          )}
         </>
       )}
     </div>
   );
 };
 
-// SectionHeader
+// ─── SectionHeader ───────────────────────────────────────────────────────────
 export const SectionHeader = ({ title, subtitle }) => (
-  <div className="flex flex-col mb-4 pl-3 relative">
-    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-[var(--accent-primary)] rounded-full"></div>
-    <h3 className="text-[14px] font-semibold text-[var(--text-primary)] leading-tight">{title}</h3>
-    {subtitle && <p className="text-[11px] text-[var(--text-muted)] font-mono mt-0.5">{subtitle}</p>}
+  <div style={{ marginBottom: 16 }}>
+    <h3 style={{
+      fontFamily: "'DM Sans', sans-serif",
+      fontSize: 14,
+      fontWeight: 600,
+      color: "#ffffff",
+      margin: 0,
+      lineHeight: 1.3,
+    }}>
+      {title}
+    </h3>
+    {subtitle && (
+      <p style={{
+        fontFamily: "'DM Mono', monospace",
+        fontSize: 11,
+        color: "rgba(255,255,255,0.4)",
+        marginTop: 4,
+        marginBottom: 0,
+      }}>
+        {subtitle}
+      </p>
+    )}
   </div>
 );
 
-// AIInsightBox
-export const AIInsightBox = ({ summary, loading, label = "AI Narrative Summary" }) => (
-  <div className="rounded-xl border border-[var(--border-subtle)] overflow-hidden relative" style={{ background: "linear-gradient(180deg, var(--bg-surface) 0%, #0F1420 100%)" }}>
-    <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-[var(--accent-primary)]"></div>
-    <div className="px-4 py-3 border-b border-[var(--border-subtle)] flex items-center gap-2">
-      <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)] pulse-dot"></div>
-      <div className="uppercase font-mono text-[10px] tracking-wider text-[var(--text-primary)] font-medium">{label}</div>
-      <div className="text-[10px] font-mono text-[var(--text-muted)] ml-auto">· Groq llama-3.3-70b</div>
-    </div>
-    <div className="p-4 relative min-h-[140px]">
-      {loading ? (
-        <div className="space-y-3 mt-1">
-          <LoadingSkeleton height={12} className="rounded-md w-[85%]" />
-          <LoadingSkeleton height={12} className="rounded-md w-[70%]" />
-          <LoadingSkeleton height={12} className="rounded-md w-[90%]" />
-        </div>
-      ) : (
-        <p className="text-[13px] text-[var(--text-secondary)] leading-[1.7] animate-[slide-up_300ms_ease-out]">{summary}</p>
-      )}
-    </div>
-  </div>
-);
+// ─── AIInsightBox ─────────────────────────────────────────────────────────────
+export const AIInsightBox = ({ summary, loading, label = "AI Narrative Summary" }) => {
+  const typed = useTypewriter(summary || '', 10);
 
-// SearchResultCard
-const getIdeologyColor = (subreddit) => {
+  return (
+    <div style={{
+      border: "1px solid rgba(255,255,255,0.12)",
+      borderLeft: "3px solid #E24B4A",
+      borderRadius: "0 8px 8px 0",
+      background: "rgba(255,255,255,0.03)",
+      padding: "14px 16px",
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+        <span style={{
+          fontFamily: "'DM Mono', monospace",
+          fontSize: 11,
+          background: "rgba(226,75,74,0.2)",
+          color: "#f87171",
+          borderRadius: 4,
+          padding: "2px 8px",
+          flexShrink: 0,
+        }}>
+          AI ANALYSIS
+        </span>
+        <span style={{
+          fontFamily: "'DM Mono', monospace",
+          fontSize: 11,
+          color: "rgba(255,255,255,0.4)",
+        }}>
+          {label}
+        </span>
+      </div>
+
+      <div style={{ minHeight: 60 }}>
+        {loading ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <LoadingSkeleton height={12} className="w-[90%]" />
+            <LoadingSkeleton height={12} className="w-[75%]" />
+          </div>
+        ) : (
+          <p style={{
+            fontFamily: "'DM Sans', sans-serif",
+            fontSize: 14,
+            color: "rgba(255,255,255,0.85)",
+            lineHeight: 1.7,
+            margin: 0,
+          }}>
+            {typed}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ─── SubredditBar ─────────────────────────────────────────────────────────────
+export const getIdeologyColor = (subreddit) => {
   const sub = (subreddit || "").toLowerCase();
-  const left = ["politics", "whitepeopletwitter", "democrats", "worldnews", "news"];
+  const left = ["politics", "whitepeopletwitter", "democrats", "worldnews", "news", "liberal", "socialism", "anarchism"];
   const right = ["conservative", "republican", "conspiracy", "walkaway"];
-  if (left.includes(sub)) return "var(--accent-left)";
-  if (right.includes(sub)) return "var(--accent-right)";
-  return "var(--accent-center)";
+  if (left.includes(sub)) return "#60A5FA";
+  if (right.includes(sub)) return "#E24B4A";
+  return "#1D9E75";
 };
 
-export const SearchResultCard = ({ title, subreddit, author, date, score, relevance }) => {
-  const color = getIdeologyColor(subreddit);
-  const relColor = relevance < 0.3 ? "var(--accent-danger)" : relevance < 0.7 ? "var(--accent-warn)" : "var(--accent-center)";
-  
+export const SubredditBar = ({ name, count, maxCount, pctIncrease }) => {
+  const color = getIdeologyColor(name);
+  const pct = Math.max(4, (count / maxCount) * 100);
+
   return (
-    <div className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-xl hover:-translate-y-0.5 hover:border-[var(--border-active)] transition-all duration-150 overflow-hidden relative group">
-      <div className="p-4 pb-5 flex flex-col gap-3">
-        <div className="flex items-start justify-between gap-4">
-          <h4 className="text-[14px] font-medium text-[var(--text-primary)] leading-snug">
-            {relevance < 0.3 && <span className="text-[var(--accent-warn)] mr-1.5 font-sans font-normal" title="Low Relevance">⚠</span>}
-            {title}
-          </h4>
-          <div className="font-mono text-[11px] text-[var(--text-muted)] flex-shrink-0 text-right">
-            ⭐ {score}
-          </div>
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 5 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: color }} />
+          <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: "#ffffff" }}>
+            r/{name}
+          </span>
         </div>
-        
-        <div className="flex items-center justify-between mt-auto">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center bg-[var(--bg-elevated)] px-2.5 py-1 rounded-full border border-[var(--border-subtle)]">
-              <span className="w-1.5 h-1.5 rounded-full mr-2" style={{ backgroundColor: color }}></span>
-              <span className="font-mono text-[10px] text-[var(--text-secondary)] tracking-wide">r/{subreddit}</span>
-            </div>
-            <div className="text-[11px] text-[var(--text-muted)] hidden sm:block font-mono">u/{author}</div>
-          </div>
-          {date && <div className="text-[11px] text-[var(--text-muted)] font-mono">{date.split(' ')[0]}</div>}
-        </div>
-      </div>
-      <div className="absolute bottom-0 left-0 h-[3px] bg-black/20 w-full overflow-hidden">
-        <div className="h-full transition-all" style={{ width: `${Math.max(0, Math.min(100, relevance * 100))}%`, backgroundColor: relColor }}></div>
-      </div>
-    </div>
-  );
-};
-
-// TopicCard
-export const TopicCard = ({ label, words, count, color, selected, onClick }) => {
-  return (
-    <div 
-      onClick={onClick}
-      className={`bg-[var(--bg-surface)] border rounded-xl overflow-hidden cursor-pointer transition-all duration-150 relative hover:-translate-y-0.5 group
-      ${selected ? 'border-transparent shadow-lg' : 'border-[var(--border-subtle)] hover:border-[var(--border-active)]'}`}
-      style={{
-        boxShadow: selected ? `0 0 0 1px ${color}, 0 4px 12px rgba(0,0,0,0.2)` : undefined
-      }}
-    >
-      <div className="h-[3px] w-full transition-all" style={{ backgroundColor: color }}></div>
-      <div className="p-4 flex flex-col h-full relative">
-        
-        <div className="flex justify-between items-start mb-3 gap-2">
-          <h4 className="text-[13px] font-medium text-[var(--text-primary)] line-clamp-2 leading-snug">{label}</h4>
-          <div className="bg-[var(--bg-elevated)] border border-[var(--border-subtle)] rounded font-mono text-[10px] px-1.5 py-0.5 text-[var(--text-muted)] flex-shrink-0">
-            {count}
-          </div>
-        </div>
-
-        <div className="flex flex-wrap gap-1.5 mb-3 mt-auto">
-          {words.slice(0, 8).map((word, i) => {
-            const isTop = i < 3;
-            // The prompt says: "First 3 chips: color at 15% opacity background, colored text."
-            // "Remaining 5: var(--bg-elevated) background, var(--text-muted) text"
-            return (
-              <span 
-                key={word} 
-                className={`text-[10px] px-1.5 py-0.5 rounded ${isTop ? 'font-medium' : 'font-mono'}`}
-                style={isTop ? { backgroundColor: `${color}26`, color: color } : { backgroundColor: 'var(--bg-elevated)', color: 'var(--text-muted)' }}
-              >
-                {word}
-              </span>
-            );
-          })}
-        </div>
-      </div>
-      
-      {/* Mini bar at bottom */}
-      <div className="absolute bottom-0 left-0 h-[2px] bg-[var(--bg-elevated)] w-full">
-        {/* We assume max top-end is around 1000 for visual scaling, could be adjusted */}
-        <div className="h-full transition-all" style={{ width: `${Math.min(100, (count / 250) * 100)}%`, backgroundColor: color }}></div>
-      </div>
-    </div>
-  );
-};
-
-// EventRow
-const CATEGORY_COLORS = {
-  election: "var(--accent-primary)",
-  policy: "var(--accent-center)",
-  protest: "var(--accent-danger)",
-  international: "var(--accent-warn)"
-};
-
-export const EventRow = ({ date, title, category, spikeFactory, selected, onClick }) => {
-  const color = CATEGORY_COLORS[category] || "var(--text-muted)";
-  
-  return (
-    <div 
-      onClick={onClick}
-      className={`relative pl-8 pr-4 py-3 cursor-pointer border-l-2 transition-all duration-150 group
-      ${selected ? 'bg-[var(--bg-elevated)]' : 'border-transparent hover:bg-[var(--bg-elevated)]/50'}`}
-      style={{ borderLeftColor: selected ? color : 'transparent' }}
-    >
-      <div className="absolute left-[13px] top-[18px] w-2 h-2 rounded-full z-10" style={{ backgroundColor: color }}></div>
-      <div className="absolute left-[16px] top-[18px] bottom-[-18px] w-[1px] bg-[var(--border-subtle)] z-0 group-last:hidden"></div>
-
-      <div className="flex items-center justify-between mb-1.5">
-        <div className="font-mono text-[11px] text-[var(--text-muted)]">{date}</div>
-        <div className="flex items-center gap-2">
-          {spikeFactory > 1.5 && (
-            <span className="font-mono text-[10px] text-[var(--accent-danger)] bg-[var(--accent-danger)]/10 px-1.5 rounded border border-[var(--accent-danger)]/20">
-              ↑{spikeFactory}×
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {pctIncrease !== undefined && (
+            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: pctIncrease >= 0 ? "#4ade80" : "#f87171" }}>
+              {pctIncrease >= 0 ? '↑' : '↓'} {Math.abs(pctIncrease)}%
             </span>
           )}
-          <span className="text-[10px] px-1.5 py-0.5 rounded font-medium capitalize" style={{ color: color, backgroundColor: `${color}26` }}>
-            {category}
+          <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "rgba(255,255,255,0.5)" }}>
+            {count.toLocaleString()}
           </span>
         </div>
       </div>
-      <h4 className="text-[13px] text-[var(--text-primary)] leading-snug">{title}</h4>
+      <div style={{ background: "rgba(255,255,255,0.08)", height: 6, borderRadius: 3, overflow: "hidden" }}>
+        <div style={{
+          height: "100%", width: `${pct}%`,
+          backgroundColor: color, borderRadius: 3,
+          transition: "width 0.4s ease",
+        }} />
+      </div>
     </div>
   );
 };
 
-// EmptyState
+// ─── Tag pill helper ──────────────────────────────────────────────────────────
+const TAG_STYLES = {
+  election:      { bg: "rgba(226,75,74,0.15)",  color: "#f87171",  border: "0.5px solid rgba(226,75,74,0.3)" },
+  political:     { bg: "rgba(226,75,74,0.15)",  color: "#f87171",  border: "0.5px solid rgba(226,75,74,0.3)" },
+  protest:       { bg: "rgba(226,75,74,0.15)",  color: "#f87171",  border: "0.5px solid rgba(226,75,74,0.3)" },
+  policy:        { bg: "rgba(55,138,221,0.15)", color: "#60a5fa",  border: "0.5px solid rgba(55,138,221,0.3)" },
+  international: { bg: "rgba(251,191,36,0.15)", color: "#fbbf24",  border: "0.5px solid rgba(251,191,36,0.3)" },
+  economic:      { bg: "rgba(251,191,36,0.15)", color: "#fbbf24",  border: "0.5px solid rgba(251,191,36,0.3)" },
+};
+
+const TagPill = ({ category }) => {
+  const s = TAG_STYLES[category] || TAG_STYLES.policy;
+  return (
+    <span style={{
+      fontFamily: "'DM Mono', monospace",
+      fontSize: 10,
+      borderRadius: 4,
+      padding: "2px 7px",
+      background: s.bg,
+      color: s.color,
+      border: s.border,
+      display: "inline-block",
+      textTransform: "capitalize",
+    }}>
+      {category}
+    </span>
+  );
+};
+
+// ─── EventRow ─────────────────────────────────────────────────────────────────
+export const EventRow = ({ date, title, category, spike_factor, selected, onClick }) => {
+  const [hovered, setHovered] = useState(false);
+
+  const bg = selected
+    ? "rgba(255,255,255,0.06)"
+    : hovered
+    ? "rgba(255,255,255,0.04)"
+    : "transparent";
+
+  return (
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        position: "relative",
+        padding: "10px 12px",
+        borderRadius: 8,
+        cursor: "pointer",
+        background: bg,
+        transition: "background 0.12s ease",
+        marginBottom: 2,
+      }}
+    >
+      {/* Right-edge red accent bar for active */}
+      {selected && (
+        <div style={{
+          position: "absolute",
+          right: 0, top: "15%", bottom: "15%",
+          width: 3,
+          backgroundColor: "#E24B4A",
+          borderRadius: "2px 0 0 2px",
+        }} />
+      )}
+
+      {/* Date */}
+      <div style={{
+        fontFamily: "'DM Mono', monospace",
+        fontSize: 10,
+        color: "rgba(255,255,255,0.4)",
+        marginBottom: 4,
+      }}>
+        {date}
+      </div>
+
+      {/* Title */}
+      <div style={{
+        fontFamily: "'DM Sans', sans-serif",
+        fontSize: 14,
+        fontWeight: 500,
+        color: "#ffffff",
+        lineHeight: 1.4,
+        marginBottom: 6,
+      }}>
+        {title}
+      </div>
+
+      {/* Tag row */}
+      <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+        <TagPill category={category} />
+        {spike_factor > 1.5 && (
+          <span style={{
+            fontFamily: "'DM Mono', monospace",
+            fontSize: 10,
+            color: "#f87171",
+            background: "rgba(226,75,74,0.1)",
+            border: "0.5px solid rgba(226,75,74,0.25)",
+            borderRadius: 4,
+            padding: "2px 6px",
+          }}>
+            ↑ {spike_factor}×
+          </span>
+        )}
+      </div>
+    </div>
+  );
+};
+
+
+// ─── SearchResultCard ─────────────────────────────────────────────────────────
+
+export const SearchResultCard = ({ title, subreddit, author, date, score, relevance, url }) => {
+  const [hovered, setHovered] = useState(false);
+  const color = getIdeologyColor(subreddit);
+  const relColor = relevance < 0.3 ? "#f87171" : relevance < 0.7 ? "#fbbf24" : "#4ade80";
+
+  return (
+    <a 
+      href={url} 
+      target="_blank" 
+      rel="noopener noreferrer"
+      style={{ textDecoration: "none", color: "inherit", display: "block" }}
+    >
+      <div
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        style={{
+          background: hovered ? "rgba(255,255,255,0.04)" : "transparent",
+          border: "1px solid rgba(255,255,255,0.12)",
+          borderRadius: 10,
+          padding: "12px 14px",
+          transition: "background 0.12s ease",
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 10 }}>
+          <h4 style={{
+            fontFamily: "'DM Sans', sans-serif",
+            fontSize: 14,
+            fontWeight: 500,
+            color: "#ffffff",
+            margin: 0,
+            lineHeight: 1.4,
+          }}>
+            {relevance < 0.3 && <span style={{ color: "#fbbf24", marginRight: 6 }}>⚠</span>}
+            {title}
+          </h4>
+          <div style={{
+            fontFamily: "'DM Mono', monospace",
+            fontSize: 11,
+            color: "rgba(255,255,255,0.4)",
+            flexShrink: 0,
+          }}>
+            ↑ {score}
+          </div>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 5,
+              background: "rgba(255,255,255,0.06)",
+              borderRadius: 4,
+              padding: "2px 8px",
+              border: "0.5px solid rgba(255,255,255,0.1)",
+            }}>
+              <div style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: color }} />
+              <span style={{
+                fontFamily: "'DM Mono', monospace",
+                fontSize: 10,
+                color: "rgba(255,255,255,0.7)",
+              }}>
+                r/{subreddit}
+              </span>
+            </div>
+            <span style={{
+              fontFamily: "'DM Mono', monospace",
+              fontSize: 11,
+              color: "rgba(255,255,255,0.35)",
+            }}>
+              u/{author}
+            </span>
+          </div>
+          {date && (
+            <span style={{
+              fontFamily: "'DM Mono', monospace",
+              fontSize: 11,
+              color: "rgba(255,255,255,0.35)",
+            }}>
+              {date.split(' ')[0]}
+            </span>
+          )}
+        </div>
+
+        {/* Relevance bar at bottom */}
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 2, background: "rgba(255,255,255,0.06)" }}>
+          <div style={{
+            height: "100%",
+            width: `${Math.max(0, Math.min(100, relevance * 100))}%`,
+            backgroundColor: relColor,
+            transition: "width 0.3s ease",
+          }} />
+        </div>
+      </div>
+    </a>
+  );
+};
+
+// ─── TopicCard ────────────────────────────────────────────────────────────────
+export const TopicCard = ({ label, words, count, color, selected, onClick }) => {
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        background: selected
+          ? "rgba(255,255,255,0.06)"
+          : hovered
+          ? "rgba(255,255,255,0.04)"
+          : "rgba(255,255,255,0.02)",
+        border: selected
+          ? `1px solid rgba(255,255,255,0.2)`
+          : "1px solid rgba(255,255,255,0.1)",
+        borderTop: `3px solid ${color}`,
+        borderRadius: 10,
+        padding: 14,
+        cursor: "pointer",
+        transition: "background 0.12s ease, border-color 0.12s ease",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10, gap: 8 }}>
+        <h4 style={{
+          fontFamily: "'DM Sans', sans-serif",
+          fontSize: 13,
+          fontWeight: 500,
+          color: "#ffffff",
+          margin: 0,
+          lineHeight: 1.4,
+          overflow: "hidden",
+          display: "-webkit-box",
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: "vertical",
+        }}>
+          {label}
+        </h4>
+        <div style={{
+          fontFamily: "'DM Mono', monospace",
+          fontSize: 10,
+          color: "rgba(255,255,255,0.4)",
+          background: "rgba(255,255,255,0.06)",
+          borderRadius: 4,
+          padding: "2px 6px",
+          flexShrink: 0,
+        }}>
+          {count}
+        </div>
+      </div>
+
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 8 }}>
+        {words.slice(0, 8).map((word, i) => (
+          <span
+            key={word}
+            style={i < 3
+              ? { backgroundColor: `${color}26`, color: color, fontSize: 10, padding: "2px 6px", borderRadius: 3, fontFamily: "'DM Mono', monospace" }
+              : { backgroundColor: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)", fontSize: 10, padding: "2px 6px", borderRadius: 3, fontFamily: "'DM Mono', monospace" }
+            }
+          >
+            {word}
+          </span>
+        ))}
+      </div>
+
+      {/* Count bar */}
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 2, background: "rgba(255,255,255,0.06)" }}>
+        <div style={{ height: "100%", width: `${Math.min(100, (count / 250) * 100)}%`, backgroundColor: color }} />
+      </div>
+    </div>
+  );
+};
+
+// ─── Card ────────────────────────────────────────────────────────────────────
+export const Card = ({ children, className = "", style = {} }) => (
+  <div 
+    className={`bg-white/[0.02] border border-white/10 rounded-2xl ${className}`}
+    style={style}
+  >
+    {children}
+  </div>
+);
+
+// ─── EmptyState ───────────────────────────────────────────────────────────────
 export const EmptyState = ({ icon, message }) => (
-  <div className="flex flex-col items-center justify-center p-12 h-full w-full opacity-70">
-    <div className="text-[32px] text-[var(--text-muted)] mb-4">{icon}</div>
-    <div className="text-[13px] text-[var(--text-muted)] text-center max-w-sm leading-relaxed">{message}</div>
+  <div style={{
+    display: "flex", flexDirection: "column", alignItems: "center",
+    justifyContent: "center", padding: 48, opacity: 0.6,
+  }}>
+    <div style={{ fontSize: 32, color: "rgba(255,255,255,0.3)", marginBottom: 16 }}>{icon}</div>
+    <div style={{
+      fontFamily: "'DM Sans', sans-serif",
+      fontSize: 13,
+      color: "rgba(255,255,255,0.4)",
+      textAlign: "center",
+      maxWidth: 320,
+      lineHeight: 1.6,
+    }}>
+      {message}
+    </div>
   </div>
 );
 
-// ErrorBanner
+// ─── ErrorBanner ──────────────────────────────────────────────────────────────
 export const ErrorBanner = ({ message }) => (
-  <div className="border border-[var(--accent-danger)]/40 bg-[var(--accent-danger)]/10 text-[var(--accent-danger)] text-[13px] p-4 rounded-xl flex items-center gap-3">
-    <span className="text-base leading-none">⚠️</span>
-    <p>{message}</p>
+  <div style={{
+    border: "1px solid rgba(226,75,74,0.3)",
+    background: "rgba(226,75,74,0.08)",
+    color: "#f87171",
+    fontSize: 13,
+    fontFamily: "'DM Sans', sans-serif",
+    padding: "12px 16px",
+    borderRadius: 8,
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+  }}>
+    <span style={{ fontSize: 15 }}>⚠️</span>
+    <p style={{ margin: 0 }}>{message}</p>
   </div>
 );
 
+// ─── InfoTooltip ──────────────────────────────────────────────────────────────
 export function InfoTooltip({ content }) {
   const [visible, setVisible] = useState(false);
   return (
@@ -265,19 +603,25 @@ export function InfoTooltip({ content }) {
         onMouseLeave={() => setVisible(false)}
         style={{
           width: 16, height: 16, borderRadius: "50%",
-          background: "var(--bg-elevated)", border: "1px solid var(--border-subtle)",
-          color: "var(--text-muted)", fontSize: 10, cursor: "help",
+          background: "rgba(255,255,255,0.06)",
+          border: "1px solid rgba(255,255,255,0.15)",
+          color: "rgba(255,255,255,0.4)",
+          fontSize: 10, cursor: "help",
           display: "inline-flex", alignItems: "center", justifyContent: "center",
-          fontFamily: "JetBrains Mono", lineHeight: 1, flexShrink: 0
-        }}>?</button>
+          fontFamily: "'DM Mono', monospace", lineHeight: 1, flexShrink: 0,
+          transition: "background 0.12s ease",
+        }}
+      >?</button>
       {visible && (
         <div style={{
           position: "absolute", left: 22, top: "50%", transform: "translateY(-50%)",
-          background: "var(--bg-elevated)", border: "1px solid var(--border-active)",
+          background: "#111111",
+          border: "1px solid rgba(255,255,255,0.15)",
           borderRadius: 8, padding: "8px 12px", zIndex: 100,
-          width: 260, fontSize: 12, color: "var(--text-secondary)",
-          lineHeight: 1.5, boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
-          pointerEvents: "none"
+          width: 260,
+          fontFamily: "'DM Sans', sans-serif",
+          fontSize: 12, color: "rgba(255,255,255,0.7)",
+          lineHeight: 1.6, pointerEvents: "none",
         }}>
           {content}
         </div>

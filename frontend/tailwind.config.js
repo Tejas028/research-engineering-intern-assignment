@@ -3,18 +3,21 @@ export default {
   theme: {
     extend: {
       colors: {
-        brand: { 500: "#4F6EF7", 700: "#3451D1" },
-        surface: "#0F1420",
-        elevated: "#161D2E",
+        brand: { 500: "#378ADD", 700: "#2A6EB5" },
+        surface: "#0d0d0d",
+        elevated: "#111111",
+        "accent-red": "#E24B4A",
+        "accent-blue": "#378ADD",
       },
       fontFamily: {
-        sans: ["Inter", "sans-serif"],
-        mono: ["JetBrains Mono", "monospace"],
+        sans:  ["DM Sans", "sans-serif"],
+        mono:  ["DM Mono", "monospace"],
+        serif: ["Playfair Display", "serif"],
       },
       animation: {
-        "slide-up": "slide-up 200ms ease-out",
+        "slide-up":  "slide-up 200ms ease-out",
         "pulse-dot": "pulse-dot 2s ease-in-out infinite",
-        shimmer: "shimmer 1.5s infinite linear",
+        shimmer:     "shimmer 1.8s ease-in-out infinite",
       },
       keyframes: {
         "slide-up": {
@@ -23,11 +26,12 @@ export default {
         },
         "pulse-dot": {
           "0%, 100%": { opacity: "1", transform: "scale(1)" },
-          "50%":       { opacity: "0.5", transform: "scale(1.4)" },
+          "50%":      { opacity: "0.5", transform: "scale(1.4)" },
         },
         shimmer: {
-          "0%":   { backgroundPosition: "-400px 0" },
-          "100%": { backgroundPosition: "400px 0" },
+          "0%":   { opacity: "0.4" },
+          "50%":  { opacity: "0.7" },
+          "100%": { opacity: "0.4" },
         },
       },
     },
